@@ -1,17 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-# 确保脚本使用LF换行符
-set -e  # 遇到错误立即退出
-set -u  # 使用未定义的变量时报错
-
-# 设置资源限制
+# 设置资源限制，mac默认使用zsh
 ulimit -t 5      # CPU时间限制5秒
 ulimit -v 100000 # 虚拟内存限制100MB
 ulimit -f 1024   # 文件大小限制1MB
-
-# 设置字符编码
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
 
 command=$1
 code_file=$2
@@ -46,7 +38,7 @@ case "$command" in
             if [ -f "./Main" ]; then
                 chmod +x "./Main"
                 # 运行程序
-                timeout 3s "./Main"
+                "./Main"
             else
                 echo "编译成功但可执行文件未生成"
                 exit 1
@@ -64,7 +56,7 @@ case "$command" in
         $command "$code_file" -o "$output_file" 2>&1
         if [ $? -eq 0 ]; then
             # 运行C++程序
-            timeout 3s "$output_file"
+             "$output_file"
         else
             echo "C++ compilation failed"
             exit 1
@@ -84,8 +76,8 @@ case "$command" in
         ;;
         
     "python3")
-        # 运行Python代码
-        timeout 3s python3 "$code_file"
+        # 运行Python代码，mac不支持timeout 3s
+        python3 "$code_file"
         ;;
         
     *)

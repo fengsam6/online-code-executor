@@ -1,10 +1,24 @@
 package com.oj.security.executor;
 
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.*;
 import java.nio.file.*;
+import java.util.stream.Collectors;
+import java.util.Map;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
@@ -96,24 +110,37 @@ public abstract class DockerExecutor implements LanguageExecutor {
         Path codeFile = null;
         
         try {
-            // 获取脚本路径
             String runCmd = getScriptPath();
-            
-            // 创建临时文件
             codeFile = createCodeFile(code);
             
-            // 构建进程
+            // 确保脚本路径是绝对路径
+            Path scriptPath = Paths.get(runCmd).toAbsolutePath();
+            
+            // 构建进程，显式使用bash
             ProcessBuilder pb = new ProcessBuilder(
-                runCmd,
+                "/bin/bash",  // 使用完整路径
+                scriptPath.toString(),
                 command,
                 codeFile.toString()
             );
 
             // 设置环境变量
-            pb.environment().put("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
+            Map<String, String> env = pb.environment();
+            env.put("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
+            env.put("SHELL", "/bin/bash");
+            env.put("LANG", "en_US.UTF-8");  // 设置字符编码
+            
             pb.redirectErrorStream(true);
+            
+            // 设置工作目录为脚本所在目录
+            pb.directory(scriptPath.getParent().toFile());
 
-            // 启动进程
+            // 启动进程前检查脚本权限
+            if (!Files.isExecutable(scriptPath)) {
+                log.warn("Setting execute permission for script: {}", scriptPath);
+                scriptPath.toFile().setExecutable(true);
+            }
+
             process = pb.start();
 
             // 读取输出
@@ -150,13 +177,23 @@ public abstract class DockerExecutor implements LanguageExecutor {
     }
 
     private String getScriptPath() {
-        boolean isRunningFromJar = Thread.currentThread().getContextClassLoader()
-                .getResource("org/springframework/boot/loader/Launcher.class") != null;
-                //todo 带完善路径
-        return  scriptsDir + "/run-code.sh";
-//        return isRunningFromJar
-//            ? scriptsDir + "/run-code.sh"
-//            : getClass().getClassLoader().getResource("scripts/run-code.sh").getPath();
+        try {
+            Path scriptPath = Paths.get(scriptsDir, "run-code.sh");
+            if (!Files.exists(scriptPath)) {
+                throw new IOException("Script not found: " + scriptPath);
+            }
+            
+            // 确保脚本有执行权限
+            if (!Files.isExecutable(scriptPath)) {
+                log.info("Setting execute permission for script: {}", scriptPath);
+                scriptPath.toFile().setExecutable(true);
+            }
+            
+            return scriptPath.toAbsolutePath().toString();
+        } catch (IOException e) {
+            log.error("Failed to get script path", e);
+            throw new RuntimeException("Failed to get script path", e);
+        }
     }
 
     private String readProcessOutput(Process process) throws IOException {
@@ -225,7 +262,7 @@ public abstract class DockerExecutor implements LanguageExecutor {
             batchQueue.drainTo(batch, BATCH_SIZE);
             
             CompletableFuture.allOf(batch.toArray(new CompletableFuture[0]))
-                .thenRunAsync(this::cleanupBatchResources, ioExecutor);
+                .thenRunAsync(this::cleanupResources, ioExecutor);
         }
     }
 

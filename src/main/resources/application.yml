@@ -11,7 +11,7 @@ executor:
   timeout: 5
   max-concurrent: 10
   temp-dir: ${user.dir}/tmp
-  scripts-dir: ${user.dir}/scripts
+  scripts-dir: ${user.dir}/scripts/mac
 
 logging:
   level:

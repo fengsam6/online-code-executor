@@ -7,16 +7,18 @@ RUN apt-get update && apt-get install -y \
     g++ \
     golang \
     python3 \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # 创建必要的目录
 RUN mkdir -p /app/scripts /app/tmp
 WORKDIR /app
 
-# 复制应用文件
+# 复制应用文件并设置权限
 COPY target/*.jar app.jar
 COPY scripts/run-code.sh /app/scripts/
 RUN chmod +x /app/scripts/run-code.sh
+RUN dos2unix /app/scripts/run-code.sh
 
 # 设置Java虚拟线程参数
 ENV JAVA_TOOL_OPTIONS="-XX:+UseZGC -XX:+ZGenerational"
