@@ -3,8 +3,6 @@
 *.class
 target/
 !.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
 
 ### IDE ###
 # IntelliJ IDEA
@@ -60,7 +58,7 @@ application-*.yml
 
 # 编译输出
 *.out
-Main
+#Main
 
 # Maven
 .mvn/
