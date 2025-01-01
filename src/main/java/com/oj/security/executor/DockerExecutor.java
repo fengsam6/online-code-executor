@@ -211,10 +211,26 @@ public abstract class DockerExecutor implements LanguageExecutor {
             Files.createDirectories(tempPath);
         }
         
+        // 为每个执行创建独立的目录
+        String uniqueDir = String.format("run_%d_%d",
+            Thread.currentThread().threadId(),
+            System.currentTimeMillis()
+        );
+        Path runDir = tempPath.resolve(uniqueDir);
+        Files.createDirectories(runDir);
+        
         String fileName = getFileName(code);
-        Path codeFile = tempPath.resolve(fileName + getFileExtension());
+        Path codeFile = runDir.resolve(fileName + getFileExtension());
         Files.writeString(codeFile, code, StandardCharsets.UTF_8);
         return codeFile;
+    }
+
+    /**
+     * 生成编译后的可执行文件名
+     */
+    protected String getOutputFileName(String sourceFile) {
+        // 在同一目录下生成输出文件
+        return Paths.get(sourceFile).getParent().toString() + "/Main";
     }
 
     protected String getFileName(String code) {
@@ -270,9 +286,10 @@ public abstract class DockerExecutor implements LanguageExecutor {
     private void cleanupResources() {
         try {
             Files.walk(Paths.get(tempDir))
-                .filter(path -> Files.isRegularFile(path))
+                .filter(path -> Files.isDirectory(path))
+                .filter(path -> path.getFileName().toString().startsWith("run_"))
                 .filter(this::isExpiredFile)
-                .forEach(this::deleteFile);
+                .forEach(this::deleteDirectory);
         } catch (IOException e) {
             log.error("清理资源失败", e);
         }
@@ -287,11 +304,19 @@ public abstract class DockerExecutor implements LanguageExecutor {
         }
     }
 
-    private void deleteFile(Path path) {
+    private void deleteDirectory(Path directory) {
         try {
-            Files.deleteIfExists(path);
+            Files.walk(directory)
+                .sorted(Comparator.reverseOrder())
+                .forEach(path -> {
+                    try {
+                        Files.delete(path);
+                    } catch (IOException e) {
+                        log.warn("删除文件失败: {}", path, e);
+                    }
+                });
         } catch (IOException e) {
-            log.warn("删除文件失败: {}", path, e);
+            log.warn("删除目录失败: {}", directory, e);
         }
     }
 } 

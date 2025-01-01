@@ -28,7 +28,7 @@ case "$command" in
             # 运行Java程序
             java -XX:+UseParallelGC -XX:ParallelGCThreads=2 \
                  -Xmx256m -XX:MaxRAM=512m \
-                 -cp $(dirname "$code_file") "$base_name"
+                 -cp . "$base_name"
         else
             echo "Java compilation failed"
             exit 1
@@ -36,14 +36,11 @@ case "$command" in
         ;;
         
     "gcc -O2 -Wall -fno-asm -D_FORTIFY_SOURCE=2 -o Main")
-        # 进入代码所在目录
-        cd "$dir_path" || exit 1
-        
         # 编译C代码，指定输出文件为Main
         $command "$code_file" 2>&1
         if [ $? -eq 0 ]; then
             # 确保输出文件存在且可执行
-            if [ -f "./Main" ]; then
+            if [ -f "Main" ]; then
                 chmod +x "./Main"
                 # 运行程序
                 timeout 3s "./Main"
