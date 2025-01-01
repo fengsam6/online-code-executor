@@ -18,8 +18,12 @@ public class CExecutor extends DockerExecutor {
     
     @Override
     public ExecutionResult execute(String code) {
-        // 使用-o选项指定输出文件名
+        return execute(code, "");
+    }
+    
+    @Override
+    public ExecutionResult execute(String code, String input) {
         String compileCommand = "gcc -O2 -Wall -fno-asm -D_FORTIFY_SOURCE=2 -o Main";
-        return runInDocker(compileCommand, code);
+        return runInDocker(compileCommand, code, input);
     }
 } 

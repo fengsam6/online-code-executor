@@ -16,6 +16,12 @@ public class CppExecutor extends DockerExecutor {
     
     @Override
     public ExecutionResult execute(String code) {
-        return runInDocker("g++ -O2 -Wall -std=c++17 -fno-asm -D_FORTIFY_SOURCE=2", code);
+        return execute(code, "");
+    }
+    
+    @Override
+    public ExecutionResult execute(String code, String input) {
+        String compileCommand = "g++ -O2 -Wall -std=c++17 -fno-asm -D_FORTIFY_SOURCE=2";
+        return runInDocker(compileCommand, code, input);
     }
 } 

@@ -45,6 +45,7 @@ public abstract class DockerExecutor implements LanguageExecutor {
     private static final int OUTPUT_LIMIT = 1000; // 输出行数限制
     private static final int MAX_CODE_LENGTH = 65536; // 代码长度限制64KB
     
+    protected String input; // 添加输入字段
     private final Semaphore executionSemaphore;
     private final ExecutorService executor;
     private final ThreadPoolExecutor ioExecutor;
@@ -73,10 +74,19 @@ public abstract class DockerExecutor implements LanguageExecutor {
      * 在Docker容器中执行代码
      */
     protected ExecutionResult runInDocker(String command, String code) {
+        return runInDocker(command, code, ""); // 默认空输入
+    }
+    
+    /**
+     * 在Docker容器中执行代码（带输入）
+     */
+    protected ExecutionResult runInDocker(String command, String code, String input) {
+        this.input = input;
         // 检查缓存
-        String cacheKey = command + ":" + code.hashCode();
+        String cacheKey = command + ":" + code.hashCode() + ":" + input.hashCode();
         ExecutionResult cachedResult = resultCache.getIfPresent(cacheKey);
         if (cachedResult != null) {
+            cachedResult.setInput(input);
             return cachedResult;
         }
 
@@ -84,8 +94,8 @@ public abstract class DockerExecutor implements LanguageExecutor {
             CompletableFuture<ExecutionResult> future = CompletableFuture
                 .supplyAsync(() -> executeInDocker(command, code), executor)
                 .thenApplyAsync(result -> {
-                    // 异步处理IO操作
                     cleanupResources();
+                    result.setInput(input);
                     return result;
                 }, ioExecutor);
 

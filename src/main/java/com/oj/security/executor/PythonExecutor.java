@@ -12,6 +12,11 @@ public class PythonExecutor extends DockerExecutor {
     
     @Override
     public ExecutionResult execute(String code) {
-        return runInDocker("python3", code);
+        return execute(code, "");
+    }
+    
+    @Override
+    public ExecutionResult execute(String code, String input) {
+        return runInDocker("python3", code, input);
     }
 } 

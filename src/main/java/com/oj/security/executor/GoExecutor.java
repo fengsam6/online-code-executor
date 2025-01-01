@@ -16,6 +16,11 @@ public class GoExecutor extends DockerExecutor {
     
     @Override
     public ExecutionResult execute(String code) {
-        return runInDocker("go run -gcflags='-N -l'", code);
+        return execute(code, "");
+    }
+    
+    @Override
+    public ExecutionResult execute(String code, String input) {
+        return runInDocker("go run -gcflags='-N -l'", code, input);
     }
 } 
