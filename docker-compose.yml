@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  code-executor:
+    build: .
+    container_name: code-executor
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./scripts:/app/scripts
+      - ./tmp:/app/tmp
+    environment:
+      - JAVA_TOOL_OPTIONS=-XX:+UseZGC -XX:+ZGenerational
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    security_opt:
+      - seccomp=unconfined
+    ulimits:
+      nproc: 100
+      nofile:
+        soft: 20000
+        hard: 40000 

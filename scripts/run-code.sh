@@ -7,6 +7,7 @@ ulimit -f 1024   # 文件大小限制1MB
 
 command=$1
 code_file=$2
+dir_path=$(dirname "$code_file")
 
 case "$command" in
     "javac-and-run")
@@ -16,12 +17,34 @@ case "$command" in
         # 编译Java代码
         javac -J-Xmx256m -J-XX:+UseParallelGC "$code_file"
         if [ $? -eq 0 ]; then
-            # 运行Java程序，使用文件名作为类名
+            # 运行Java程序
             java -XX:+UseParallelGC -XX:ParallelGCThreads=2 \
                  -Xmx256m -XX:MaxRAM=512m \
                  -cp $(dirname "$code_file") "$base_name"
         else
             echo "Java compilation failed"
+            exit 1
+        fi
+        ;;
+        
+    "gcc -O2 -Wall -fno-asm -D_FORTIFY_SOURCE=2 -o Main")
+        # 进入代码所在目录
+        cd "$dir_path" || exit 1
+        
+        # 编译C代码，指定输出文件为Main
+        $command "$code_file" 2>&1
+        if [ $? -eq 0 ]; then
+            # 确保输出文件存在且可执行
+            if [ -f "./Main" ]; then
+                chmod +x "./Main"
+                # 运行程序
+                timeout 3s "./Main"
+            else
+                echo "编译成功但可执行文件未生成"
+                exit 1
+            fi
+        else
+            echo "C compilation failed"
             exit 1
         fi
         ;;
@@ -50,6 +73,11 @@ case "$command" in
         # 运行Go代码
         cd $(dirname "$code_file")
         $command "$code_file" 2>&1
+        ;;
+        
+    "python3")
+        # 运行Python代码
+        timeout 3s python3 "$code_file"
         ;;
         
     *)

@@ -1,0 +1,43 @@
+server:
+  port: 8080
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    accept-count: 100
+    max-connections: 8192
+
+executor:
+  timeout: 5
+  max-concurrent: 10
+  temp-dir: ${user.dir}/tmp
+  scripts-dir: ${user.dir}/scripts
+
+logging:
+  level:
+    root: INFO
+    com:
+      oj:
+        controller: DEBUG
+        security:
+          executor: DEBUG
+
+spring:
+  mvc:
+    static-path-pattern: /**
+  web:
+    resources:
+      static-locations: classpath:/static/
+  servlet:
+    multipart:
+      max-file-size: 1MB
+      max-request-size: 10MB
+  task:
+    execution:
+      pool:
+        core-size: 8
+        max-size: 16
+        queue-capacity: 1000
+  cache:
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=5m 
